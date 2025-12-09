@@ -8,6 +8,7 @@ from tkinter import ttk
 from constants import THEME_FG, BUTTON_BG, BUTTON_FG, ENTRY_BG, ENTRY_HIGHLIGHT, FONT
 from dataStructures import Queue, Stack
 from PIL import Image, ImageTk, ImageDraw, ImageFont
+import pygame
 
 class ScienceWizard:
     def __init__(self, root):
@@ -232,15 +233,17 @@ class ScienceWizard:
         return 0
 
     def start_background_music(self):
+        pygame.mixer.init()  # Initialize pygame mixer
         self.music_thread = threading.Thread(target=self.play_background_music)
         self.music_thread.start()
-
     def play_background_music(self):
-        while not self.stop_music:
-            try:
-                playsound('Magical_Mystery(256k).mp3')
-            except:
-                pass
+        try:
+            pygame.mixer.music.load('Magical_Mystery(256k).mp3')
+            pygame.mixer.music.play(-1)  # Loop indefinitely
+            while not self.stop_music:
+                time.sleep(0.1)  # Small sleep to prevent busy waiting
+        except Exception as e:
+            print(f"Error playing background music: {e}")
 
     def start_game(self):
         random.shuffle(self.words)
@@ -318,18 +321,19 @@ class ScienceWizard:
                 self.end_game()
 
     def end_game(self):
-        self.stop_music = True
-        if self.music_thread:
-            self.music_thread.join()
+            self.stop_music = True
+            pygame.mixer.music.stop()  # Stop the music
+            if self.music_thread:
+                self.music_thread.join()
 
-        self.leaderboard.append((self.player_name, self.score))
-        self.leaderboard = sorted(self.leaderboard, key=lambda x: x[1], reverse=True)[:3]  # Consistent with save, but load is 10 - consider unifying
-        self.save_leaderboard()
+            self.leaderboard.append((self.player_name, self.score))
+            self.leaderboard = sorted(self.leaderboard, key=lambda x: x[1], reverse=True)[:3]  # Consistent with save, but load is 10 - consider unifying
+            self.save_leaderboard()
         # Check if perfect score (all 15 words correct)
-        if self.score == 15:
-            self.show_congratulations()
-        else:
-            leaderboard_text = ("Game Over!"
+            if self.score == 15:
+                self.show_congratulations()
+            else:
+                leaderboard_text = ("Game Over!"
                                 "\nYour Score: {}\n"
                                 "\nScience Wizards:\n").format(self.score)
             canvas = tk.Canvas(root, width=400, height=300)
@@ -378,6 +382,7 @@ class ScienceWizard:
         self.skip_button.destroy()
         self.high_score_label.destroy()
         self.definition_label.destroy()
+        self.title_label.destroy()
 
 
 if __name__ == "__main__":
